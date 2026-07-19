@@ -5,8 +5,17 @@ from PIL import Image, ImageOps
 
 from .config import DEFAULT_CONFIG
 
+try:
+    import pillow_heif
+
+    pillow_heif.register_heif_opener()  # เปิด HEIC/HEIF (iPhone) ได้ถ้าติดตั้ง pillow-heif
+except ImportError:
+    pass
+
 _SAVE_FORMAT = {"jpeg": "JPEG", "webp": "WEBP", "png": "PNG"}
-_SUPPORTED = frozenset(_SAVE_FORMAT.values())
+# input format ที่ยอมรับ: 3 ตัวที่ compress ลงได้ดี + format เก่า/พิเศษที่ Pillow เปิดได้
+# (BMP/TIFF ไม่มี lossless quality knob แต่ resize ก็ช่วยลดขนาดได้เยอะอยู่ดี)
+_SUPPORTED = frozenset(_SAVE_FORMAT.values()) | {"BMP", "TIFF", "GIF", "HEIF"}
 
 
 def _read_bytes(file) -> bytes:
@@ -73,7 +82,12 @@ def compress(
         else:
             img = img.convert("RGB")
 
-    save_kwargs = {"quality": quality} if out_format != "PNG" else {"optimize": True}
+    if out_format in ("JPEG", "WEBP"):
+        save_kwargs = {"quality": quality}
+    elif out_format == "PNG":
+        save_kwargs = {"optimize": True}
+    else:  # BMP/TIFF/GIF/HEIF ตอน fmt="auto" — ไม่มี quality knob, ปล่อยให้ resize ทำงานอย่างเดียว
+        save_kwargs = {}
 
     buf = BytesIO()
     img.save(buf, format=out_format, **save_kwargs)

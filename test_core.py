@@ -74,6 +74,49 @@ def test_animated_passthrough():
     assert compress(original, fmt="auto") == original
 
 
+def _make_noisy(fmt, w=1500, h=1000, **save_kw) -> bytes:
+    import random
+
+    random.seed(9)
+    img = Image.new("RGB", (w, h))
+    px = img.load()
+    for x in range(w):
+        for y in range(h):
+            px[x, y] = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+    buf = BytesIO()
+    img.save(buf, format=fmt, **save_kw)
+    return buf.getvalue()
+
+
+def test_bmp_and_tiff_convert_to_jpeg():
+    for fmt in ("BMP", "TIFF"):
+        original = _make_noisy(fmt)
+        out = compress(original, quality=75)
+        out_img = Image.open(BytesIO(out))
+        assert len(out) < len(original), f"{fmt} ควรเล็กลงมากหลังแปลงเป็น JPEG"
+        assert out_img.format == "JPEG"
+
+
+def test_gif_static_supported():
+    original = _make_noisy("GIF")
+    out = compress(original, quality=75)
+    assert Image.open(BytesIO(out)).format == "JPEG"
+    assert len(out) < len(original)
+
+
+def test_heic_supported_if_plugin_installed():
+    try:
+        import pillow_heif  # noqa: F401
+    except ImportError:
+        return  # pillow-heif เป็น optional extra — ข้ามถ้าไม่ได้ติดตั้ง
+
+    original = _make_noisy("HEIF", quality=95)
+    out = compress(original, quality=75)
+    out_img = Image.open(BytesIO(out))
+    assert out_img.format == "JPEG"
+    assert out_img.width <= 1920
+
+
 def test_decorator_list_uploadfile():
     import asyncio
 
@@ -99,5 +142,8 @@ if __name__ == "__main__":
     test_exif_orientation_applied()
     test_rgba_composites_white()
     test_animated_passthrough()
+    test_bmp_and_tiff_convert_to_jpeg()
+    test_gif_static_supported()
+    test_heic_supported_if_plugin_installed()
     test_decorator_list_uploadfile()
     print("ok")

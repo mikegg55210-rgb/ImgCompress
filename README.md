@@ -5,6 +5,7 @@
 ```bash
 pip install imgcompress            # function mode (Pillow อย่างเดียว)
 pip install imgcompress[fastapi]   # + decorator/middleware สำหรับ FastAPI
+pip install imgcompress[heif]      # + เปิดไฟล์ HEIC/HEIF (รูปจาก iPhone) ได้
 ```
 
 Python 3.10+
@@ -58,14 +59,15 @@ app.add_middleware(ImgCompress, quality=75)
 - **EXIF orientation** — รูปมือถือแนวตั้งถูกหมุนให้ถูกด้านก่อน strip metadata (ไม่งั้นรูปเอียง)
 - **โปร่งใส → JPEG** — composite ลงพื้นขาว ไม่ใช่สีขยะใต้ alpha channel
 - **Animated GIF/WebP** — คืนไฟล์เดิม ไม่ทำ animation หายเงียบๆ
-- **ไฟล์เสีย / ไม่ใช่รูป / format อื่น** — คืนไฟล์เดิม ไม่ crash (บีบเฉพาะ JPEG/PNG/WebP)
+- **ไฟล์เสีย / ไม่ใช่รูป / format ที่ไม่รู้จัก** — คืนไฟล์เดิม ไม่ crash
 - **Decompression bomb** — ภาพเกิน ~89M pixel ถูกปฏิเสธโดย Pillow → คืนไฟล์เดิม
 - ตรวจ format จากเนื้อไฟล์จริง ไม่เชื่อ extension/Content-Type
+- **รับ input ได้หลาย format**: JPEG, PNG, WebP, BMP, TIFF, GIF (นิ่ง), HEIC/HEIF (ต้องลง `imgcompress[heif]`) — แปลงเป็น `fmt` ที่ตั้งไว้ให้อัตโนมัติ (default `jpeg`)
 
 ## ขอบเขต
 
 - ไม่จัดการ storage — compress เสร็จได้ `bytes` ไปทำต่อเอง
-- HEIC (iPhone) เปิดไม่ได้ → passthrough (ถ้าต้องการ ติดตั้ง `pillow-heif` แล้วแจ้ง issue)
+- CMYK JPEG (จาก Photoshop) — ยังไม่แปลงสีให้ถูกต้อง
 - Compress เป็น sync — traffic สูงมากควร offload ไป thread pool เอง
 
 ## ทดสอบ
